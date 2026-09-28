@@ -6,3 +6,7 @@ variables:
     value: ""
   - name: refreshTocken
     value: ""
+  - name: orderId
+    value: ""
+  - name: orderIdempotencyKey
+    value: ""

@@ -1,0 +1,46 @@
+info:
+  name: create-order
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/orders"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Idempotency-Key
+      value: "{{orderIdempotencyKey}}"
+  body:
+    type: json
+    data: |-
+      {
+        "payment_method": "stripe",
+        "currency": "USD",
+        "items": [
+          { "product_id": 1, "name": "Keyboard", "quantity": 2, "unit_price": 49.99 },
+          { "product_id": 2, "name": "Mouse", "quantity": 1, "unit_price": 19.5 }
+        ]
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        // One key per logical order. Sending again reuses it, so the API
+        // replays the first response instead of creating a duplicate.
+        if (!bru.getEnvVar("orderIdempotencyKey")) {
+          bru.setEnvVar("orderIdempotencyKey", require("crypto").randomUUID());
+        }
+    - type: after-response
+      code: |-
+        if (res.status === 201) {
+          bru.setEnvVar("orderId", res.body.data.id);
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
