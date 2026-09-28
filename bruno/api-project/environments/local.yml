@@ -1,0 +1,8 @@
+name: local
+variables:
+  - name: baseUrl
+    value: http://solid-repository-pattern-large-data-system-design.test
+  - name: accessToken
+    value: ""
+  - name: refreshTocken
+    value: ""
