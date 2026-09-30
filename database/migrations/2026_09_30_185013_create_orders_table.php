@@ -52,12 +52,13 @@ return new class extends Migration
             $table->jsonb('geo_location')->nullable();
             $table->string('ip_address')->nullable();
             $table->jsonb('shipping_rules')->nullable();
-
+            $table->string('idempotency_key', 100)->nullable();
             $table->timestamps();
 
             $table->index('payment_status');
             $table->index('order_delivery_status');
             $table->index('order_date');
+            $table->unique(['user_id', 'idempotency_key']);
         });
     }
 
