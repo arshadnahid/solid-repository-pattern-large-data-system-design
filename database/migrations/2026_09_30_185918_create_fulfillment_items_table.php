@@ -45,10 +45,8 @@ return new class extends Migration
             $table->decimal('dropshipper_discount', 20, 2)->nullable();
             $table->string('dropshipper_discount_type', 20)->nullable();
 
-            $table->foreignUuid('invoice_transaction_id')
-                ->nullable()
-                ->constrained('invoice_transactions')
-                ->nullOnDelete();
+            // No invoice_transactions table yet, so this is indexed but not constrained.
+            $table->uuid('invoice_transaction_id')->nullable()->index();
 
             $table->timestamps();
 
