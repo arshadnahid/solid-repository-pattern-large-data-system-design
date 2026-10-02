@@ -4,8 +4,8 @@ namespace App\Repositories\Order;
 
 use App\DTOs\Idempotency\IdempotentResponseDTO;
 use App\DTOs\Order\CreateOrderDTO;
+use App\DTOs\Order\CreateOrderItemDTO;
 use App\DTOs\Order\OrderDTO;
-use App\DTOs\Order\OrderItemDTO;
 use App\Enums\OrderStatus;
 use App\Repositories\Order\OrderInterfaces\IdempotencyKeyRepositoryInterface;
 use App\Repositories\Order\OrderInterfaces\OrderRepositoryInterface;
@@ -40,10 +40,11 @@ class OrderRepository implements OrderRepositoryInterface, IdempotencyKeyReposit
             'id' => (string) Str::uuid(),
             'user_id' => $data->userId,
             'status' => OrderStatus::PENDING->value,
-            'payment_method' => $data->paymentMethod,
+            'payment_method' => $data->payment->provider,
             'currency' => $data->currency,
-            'total_amount' => $data->totalAmount(),
-            'items' => array_map(fn (OrderItemDTO $item) => $item->toArray(), $data->items),
+            // Not yet priced on the server: this is the client's expected total.
+            'total_amount' => (float) $data->expectedTotals->total,
+            'items' => array_map(fn (CreateOrderItemDTO $item) => $item->toArray(), $data->items),
             'transaction_id' => null,
             'created_at' => now()->toIso8601String(),
         ];
