@@ -22,8 +22,9 @@ return new class extends Migration
             $table->string('logo_url')->nullable();
             $table->decimal('transaction_percentage', 20, 2)->nullable()->default(0);
             $table->enum('transaction_type', ['MARGIN', 'COMMISSION'])->nullable();
-            $table->foreignId('created_by_id')->nullable()->constrained('admins')->nullOnDelete();
-            $table->foreignId('kam_id')->nullable()->constrained('admins')->nullOnDelete();
+            // No admins table yet, so these are indexed but not constrained.
+            $table->unsignedBigInteger('created_by_id')->nullable()->index();
+            $table->unsignedBigInteger('kam_id')->nullable()->index();
             $table->timestamps();
         });
     }

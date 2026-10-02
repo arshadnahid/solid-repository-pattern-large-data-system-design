@@ -16,9 +16,8 @@ return new class extends Migration
             $table->foreignUuid('order_id')->constrained('orders')->cascadeOnDelete();
 
             $table->enum('source_type', ['external', 'internal']);
-            // No stores / suppliers tables yet, so these are indexed but not constrained.
-            $table->uuid('store_id')->nullable()->index();
-            $table->uuid('supplier_id')->nullable()->index();
+            $table->foreignUuid('store_id')->nullable()->constrained('stores')->nullOnDelete();
+            $table->foreignUuid('supplier_id')->nullable()->constrained('suppliers')->nullOnDelete();
 
             $table->enum('delivery_status', [
                 'pending',

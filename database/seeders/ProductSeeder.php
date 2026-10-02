@@ -4,10 +4,12 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * Seeds 1,000,000 products, each with one default stock row and one category.
+ * Seeds 1,000,000 products, each in a store and about 1 in 5 also from a supplier,
+ * each with one default stock row and one category.
  *
  * Uses raw bulk inserts instead of Eloquent factories: building a million models
  * would take hours and exhaust memory. Run it on its own:
@@ -29,6 +31,15 @@ class ProductSeeder extends Seeder
 
     private const STORE_COUNT = 50;
 
+    private const SUPPLIER_COUNT = 30;
+
+    /**
+     * One in this many products is also sourced from a supplier.
+     */
+    private const SUPPLIER_PRODUCT_RATIO = 5;
+
+    private const TRANSACTION_TYPES = ['MARGIN', 'COMMISSION'];
+
     /**
      * created_at is spread over this window so date-range queries have realistic data.
      */
@@ -49,7 +60,8 @@ class ProductSeeder extends Seeder
 
         $brandIds = $this->seedBrands();
         $categoryIds = $this->seedCategories();
-        $storeIds = array_map(fn () => (string) Str::uuid(), range(1, self::STORE_COUNT));
+        $stores = $this->seedStores();
+        $suppliers = $this->seedSuppliers();
 
         // Keeps slugs unique per store when the seeder is run more than once.
         $runTag = Str::lower(Str::random(5));
@@ -70,7 +82,7 @@ class ProductSeeder extends Seeder
                 $name = self::ADJECTIVES[array_rand(self::ADJECTIVES)].' '.self::NOUNS[array_rand(self::NOUNS)].' '.$number;
                 $createdAt = date('Y-m-d H:i:s', time() - mt_rand(0, self::CREATED_WITHIN_SECONDS));
 
-                $products[] = $this->productRow($productId, $name, $number, $runTag, $createdAt, $brandIds, $storeIds);
+                $products[] = $this->productRow($productId, $name, $number, $runTag, $createdAt, $brandIds, $stores, $suppliers);
                 $stocks[] = $this->stockRow($productId, $number, $runTag);
                 $productCategories[] = [
                     'product_id' => $productId,
@@ -121,6 +133,100 @@ class ProductSeeder extends Seeder
     }
 
     /**
+     * Creates one owner user per store.
+     *
+     * @return array<string, string> store id => "Store name (Owner name)"
+     */
+    private function seedStores(): array
+    {
+        if (DB::table('stores')->exists()) {
+            return DB::table('stores')
+                ->leftJoin('users', 'users.id', '=', 'stores.user_id')
+                ->get(['stores.id', 'stores.store_name', 'users.name as owner_name'])
+                ->mapWithKeys(fn ($store) => [$store->id => $this->storeLabel($store->store_name, $store->owner_name)])
+                ->all();
+        }
+
+        $now = now();
+        // Hashing is slow, so every owner shares one hash.
+        $password = Hash::make('12345678');
+        $owners = [];
+
+        for ($i = 1; $i <= self::STORE_COUNT; $i++) {
+            $owners[] = [
+                'name' => "Owner {$i}",
+                'email' => "owner{$i}@example.com",
+                'password' => $password,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        // Upsert so a rerun after a partial seed does not hit the unique email index.
+        DB::table('users')->upsert($owners, ['email'], ['name', 'updated_at']);
+        $ownerIds = DB::table('users')->whereIn('email', array_column($owners, 'email'))->pluck('id', 'email');
+
+        $rows = [];
+        $labels = [];
+
+        foreach ($owners as $index => $owner) {
+            $i = $index + 1;
+            $id = (string) Str::orderedUuid();
+            $rows[] = [
+                'id' => $id,
+                'user_id' => $ownerIds[$owner['email']],
+                'store_name' => "Store {$i}",
+                'is_online' => true,
+                'is_approved' => true,
+                'is_active' => true,
+                'store_type' => mt_rand(0, 1) === 1 ? 'INTERNAL' : 'EXTERNAL',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+            $labels[$id] = $this->storeLabel("Store {$i}", $owner['name']);
+        }
+
+        DB::table('stores')->insert($rows);
+
+        return $labels;
+    }
+
+    private function storeLabel(string $storeName, ?string $ownerName): string
+    {
+        return $ownerName === null ? $storeName : "{$storeName} ({$ownerName})";
+    }
+
+    /**
+     * @return array<string, string> supplier id => supplier name
+     */
+    private function seedSuppliers(): array
+    {
+        if (DB::table('suppliers')->exists()) {
+            return DB::table('suppliers')->pluck('name', 'id')->all();
+        }
+
+        $now = now();
+        $rows = [];
+
+        for ($i = 1; $i <= self::SUPPLIER_COUNT; $i++) {
+            $rows[] = [
+                'id' => (string) Str::orderedUuid(),
+                'name' => "Supplier {$i}",
+                'slug' => "supplier-{$i}",
+                'email' => "supplier{$i}@example.com",
+                'transaction_percentage' => mt_rand(500, 2500) / 100,
+                'transaction_type' => self::TRANSACTION_TYPES[array_rand(self::TRANSACTION_TYPES)],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        DB::table('suppliers')->insert($rows);
+
+        return array_column($rows, 'name', 'id');
+    }
+
+    /**
      * Creates a two-level tree: the first tenth are roots, the rest are their children.
      *
      * @return list<string>
@@ -156,10 +262,21 @@ class ProductSeeder extends Seeder
 
     /**
      * @param  list<string>  $brandIds
-     * @param  list<string>  $storeIds
+     * @param  array<string, string>  $stores  store id => "Store name (Owner name)"
+     * @param  array<string, string>  $suppliers  supplier id => supplier name
      */
-    private function productRow(string $id, string $name, int $number, string $runTag, string $createdAt, array $brandIds, array $storeIds): array
+    private function productRow(string $id, string $name, int $number, string $runTag, string $createdAt, array $brandIds, array $stores, array $suppliers): array
     {
+        // Every product is listed in a store; some are also sourced from a supplier.
+        // The name gets the store (and owner) as a suffix, then the supplier if any.
+        $storeId = array_rand($stores);
+        $name .= ' - '.$stores[$storeId];
+
+        $supplierId = null;
+        if (mt_rand(1, self::SUPPLIER_PRODUCT_RATIO) === 1) {
+            $supplierId = array_rand($suppliers);
+            $name .= ' - '.$suppliers[$supplierId];
+        }
         $shippingCostType = self::SHIPPING_COST_TYPES[array_rand(self::SHIPPING_COST_TYPES)];
 
         return [
@@ -168,8 +285,8 @@ class ProductSeeder extends Seeder
             'name' => $name,
             'slug' => Str::slug($name).'-'.$runTag,
             'unit' => self::UNITS[array_rand(self::UNITS)],
-            'store_id' => $storeIds[array_rand($storeIds)],
-            'supplier_id' => null,
+            'store_id' => $storeId,
+            'supplier_id' => $supplierId,
             'brand_id' => $brandIds[array_rand($brandIds)],
             'short_description' => "Short description for {$name}.",
             'description' => "Full description for {$name}.",

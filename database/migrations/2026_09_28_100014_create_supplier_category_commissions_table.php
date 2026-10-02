@@ -13,8 +13,7 @@ return new class extends Migration
     {
         Schema::create('supplier_category_commissions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            // No suppliers table yet, so this is not constrained.
-            $table->uuid('supplier_id');
+            $table->foreignUuid('supplier_id')->constrained('suppliers')->cascadeOnDelete();
             $table->foreignUuid('category_id')->constrained('categories')->cascadeOnDelete();
             $table->decimal('commission_percentage', 20, 2);
             $table->timestamps();

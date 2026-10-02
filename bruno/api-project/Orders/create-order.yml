@@ -15,13 +15,94 @@ http:
     type: json
     data: |-
       {
-        "payment_method": "stripe",
+        "idempotency_key": "7f3c9a2e-4b1d-4e8a-9c6f-2d5e8b1a0f47",
         "currency": "USD",
+
+        "shipping_address": {
+          "full_name": "John Carter",
+          "phone": "+1-415-555-0142",
+          "email": "john.carter@example.com",
+          "address_line_1": "742 Evergreen Terrace",
+          "address_line_2": "Apt 5B",
+          "city_id": 1204,
+          "state_id": 5,
+          "country_id": 233,
+          "city": "San Francisco",
+          "state": "CA",
+          "zip_code": "94107",
+          "country_code": "US"
+        },
+
+        "billing_address": {
+          "same_as_shipping": true
+        },
+
+        "payment": {
+          "provider": "stripe",
+          "method": "card",
+          "stripe_payment_method_id": "pm_1QxK2mLkdIwHu7ix8ZpTq3Vb",
+          "save_payment_method": false,
+          "return_url": "https://shop.example.com/checkout/3ds-complete"
+        },
+
         "items": [
-          { "product_id": 1, "name": "Keyboard", "quantity": 2, "unit_price": 49.99 },
-          { "product_id": 2, "name": "Mouse", "quantity": 1, "unit_price": 19.5 }
-        ]
+          {
+            "product_stock_id": "9b1c2e44-6a0f-4d3b-8e21-5f7a9c0d1b23",
+            "qty": 2,
+            "expected_unit_price": "49.99"
+          },
+          {
+            "product_stock_id": "3e8f7a10-2c4b-4f9d-a1e6-7b2c5d8e9f01",
+            "qty": 1,
+            "expected_unit_price": "129.00"
+          },
+          {
+            "product_stock_id": "c47d2b9e-8f1a-4e6c-b3d0-1a9e5f7c2b88",
+            "qty": 3,
+            "expected_unit_price": "15.50"
+          }
+        ],
+
+        "shipping_selections": [
+          {
+            "store_id": "a12f4c8e-9b3d-4e1a-8f6c-2d7b5e9a0c14",
+            "shipping_rule_id": "d91e3b7a-4c2f-4a8e-b6d1-9f0c3e5a7b22"
+          },
+          {
+            "supplier_id": "f5b8e2c1-7d4a-4b9e-a3f6-8c1d0e2b5a97",
+            "shipping_rule_id": "e2a7c4d9-1b6f-4e3a-9d8c-5b0f7a2e1c63"
+          }
+        ],
+
+        "coupons": [
+          {
+            "code": "STORE10",
+            "store_id": "a12f4c8e-9b3d-4e1a-8f6c-2d7b5e9a0c14"
+          },
+          {
+            "code": "SUPPLIER5OFF",
+            "supplier_id": "f5b8e2c1-7d4a-4b9e-a3f6-8c1d0e2b5a97"
+          }
+        ],
+
+        "expected_totals": {
+          "subtotal": "275.48",
+          "shipping": "12.00",
+          "tax": "22.73",
+          "discount": "18.55",
+          "total": "291.66"
+        },
+
+        "client_meta": {
+          "geo_location": { "lat": 37.7749, "lng": -122.4194 },
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5)",
+          "platform": "web"
+        },
+
+        "customer_note": "Please leave the package at the front desk."
       }
+
+      here what need to ensure payment ,suppose i am using stripe
   auth: inherit
 
 runtime:

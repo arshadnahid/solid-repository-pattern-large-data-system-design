@@ -17,9 +17,8 @@ return new class extends Migration
             $table->string('name', 500);
             $table->string('slug', 500)->index();
             $table->string('unit', 50)->nullable();
-            $table->uuid('store_id')->nullable();
-            // No suppliers table yet, so this is indexed but not constrained.
-            $table->uuid('supplier_id')->nullable()->index();
+            $table->foreignUuid('store_id')->nullable()->constrained('stores')->nullOnDelete();
+            $table->foreignUuid('supplier_id')->nullable()->constrained('suppliers')->nullOnDelete();
             $table->foreignUuid('brand_id')->nullable()->constrained('brands')->nullOnDelete();
             $table->string('short_description', 1000)->nullable();
             $table->text('description')->nullable();
