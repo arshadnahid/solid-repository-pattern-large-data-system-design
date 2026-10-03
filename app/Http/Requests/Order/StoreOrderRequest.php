@@ -14,13 +14,23 @@ class StoreOrderRequest extends FormRequest
         return auth()->check();
     }
 
+    /**
+     * The header is what EnsureIdempotency deduplicates on, so it is the key
+     * we validate and persist. Any idempotency_key in the body is overwritten.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['idempotency_key' => $this->header(EnsureIdempotency::HEADER)]);
+    }
+
     public function rules(): array
     {
         $money = ['required', 'decimal:0,2', 'min:0'];
         $billingRequired = 'required_unless:billing_address.same_as_shipping,true';
 
         return [
-            'idempotency_key' => ['sometimes', 'uuid'],
+            // Fits orders.idempotency_key.
+            'idempotency_key' => ['required', 'string', 'max:100'],
             'currency' => ['required', 'string', 'size:3'],
 
             'shipping_address' => ['required', 'array'],
@@ -74,8 +84,7 @@ class StoreOrderRequest extends FormRequest
         return CreateOrderDTO::fromArray(
             $this->validated(),
             userId: auth()->id(),
-            // The header is what EnsureIdempotency deduplicates on, so it is the one we persist.
-            idempotencyKey: $this->header(EnsureIdempotency::HEADER),
+            idempotencyKey: $this->validated('idempotency_key'),
             ipAddress: $this->ip(),
         );
     }

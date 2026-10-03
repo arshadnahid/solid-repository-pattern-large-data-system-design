@@ -9,13 +9,13 @@ namespace App\DTOs\Order;
 final class OrderPaymentDTO
 {
     /**
-     * @param  string  $paymentMethodId  Token created by Stripe.js (pm_...), never raw card data.
+     * @param  string|null  $paymentMethodId  Token created by Stripe.js (pm_...), never raw card data.
      * @param  string|null  $returnUrl  Where Stripe sends the customer back after a 3DS challenge.
      */
     public function __construct(
         public readonly string $provider,
         public readonly string $method,
-        public readonly string $paymentMethodId,
+        public readonly ?string $paymentMethodId,
         public readonly bool $savePaymentMethod,
         public readonly ?string $returnUrl,
     ) {
@@ -26,7 +26,7 @@ final class OrderPaymentDTO
         return new self(
             provider: $data['provider'],
             method: $data['method'],
-            paymentMethodId: $data['stripe_payment_method_id'],
+            paymentMethodId: $data['stripe_payment_method_id'] ?? null,
             savePaymentMethod: (bool) ($data['save_payment_method'] ?? false),
             returnUrl: $data['return_url'] ?? null,
         );

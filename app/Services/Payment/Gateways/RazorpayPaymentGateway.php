@@ -4,8 +4,8 @@ namespace App\Services\Payment\Gateways;
 
 use App\DTOs\Payment\PaymentRequestDTO;
 use App\DTOs\Payment\PaymentResultDTO;
+use App\Enums\PaymentOutcome;
 use App\Repositories\Payment\PaymentInterfaces\PaymentGatewayInterface;
-use Illuminate\Support\Str;
 
 class RazorpayPaymentGateway implements PaymentGatewayInterface
 {
@@ -17,7 +17,7 @@ class RazorpayPaymentGateway implements PaymentGatewayInterface
         // The transaction id below is derived from the key: same key, same charge.
 
         return new PaymentResultDTO(
-            success: true,
+            outcome: PaymentOutcome::SUCCEEDED,
             gateway: 'razorpay',
             transactionId: 'pay_'.substr(hash('sha256', $payment->idempotencyKey), 0, 14),
             message: 'Payment captured by Razorpay (demo).',

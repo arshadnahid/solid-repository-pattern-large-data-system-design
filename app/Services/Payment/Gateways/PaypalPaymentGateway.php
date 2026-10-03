@@ -4,8 +4,8 @@ namespace App\Services\Payment\Gateways;
 
 use App\DTOs\Payment\PaymentRequestDTO;
 use App\DTOs\Payment\PaymentResultDTO;
+use App\Enums\PaymentOutcome;
 use App\Repositories\Payment\PaymentInterfaces\PaymentGatewayInterface;
-use Illuminate\Support\Str;
 
 class PaypalPaymentGateway implements PaymentGatewayInterface
 {
@@ -16,7 +16,7 @@ class PaypalPaymentGateway implements PaymentGatewayInterface
         // The transaction id below is derived from the key: same key, same charge.
 
         return new PaymentResultDTO(
-            success: true,
+            outcome: PaymentOutcome::SUCCEEDED,
             gateway: 'paypal',
             transactionId: 'PAYID-'.strtoupper(substr(hash('sha256', $payment->idempotencyKey), 0, 20)),
             message: 'Payment captured by PayPal (demo).',

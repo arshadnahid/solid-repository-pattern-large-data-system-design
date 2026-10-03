@@ -2,39 +2,42 @@
 
 namespace App\DTOs\Order;
 
+/**
+ * One stored order line, as it was priced when the order was placed.
+ */
 final class OrderItemDTO
 {
     public function __construct(
-        public readonly int $productId,
-        public readonly string $name,
-        public readonly int $quantity,
-        public readonly float $unitPrice,
+        public readonly string $productStockId,
+        public readonly ?string $productName,
+        public readonly ?string $sku,
+        public readonly int $qty,
+        public readonly string $unitPrice,
+        public readonly string $taxAmount,
     ) {
     }
 
-    public static function fromArray(array $item): self
+    public static function fromRow(object $row): self
     {
         return new self(
-            productId: (int) $item['product_id'],
-            name: $item['name'],
-            quantity: (int) $item['quantity'],
-            unitPrice: (float) $item['unit_price'],
+            productStockId: $row->product_stock_id,
+            productName: $row->product_name,
+            sku: $row->sku,
+            qty: (int) $row->qty,
+            unitPrice: (string) $row->unit_price,
+            taxAmount: (string) $row->fulfillment_item_tax_amount,
         );
-    }
-
-    public function subtotal(): float
-    {
-        return round($this->quantity * $this->unitPrice, 2);
     }
 
     public function toArray(): array
     {
         return [
-            'product_id' => $this->productId,
-            'name' => $this->name,
-            'quantity' => $this->quantity,
+            'product_stock_id' => $this->productStockId,
+            'product_name' => $this->productName,
+            'sku' => $this->sku,
+            'qty' => $this->qty,
             'unit_price' => $this->unitPrice,
-            'subtotal' => $this->subtotal(),
+            'tax_amount' => $this->taxAmount,
         ];
     }
 }

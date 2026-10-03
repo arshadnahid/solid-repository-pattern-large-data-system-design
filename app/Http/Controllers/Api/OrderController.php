@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
 use App\Services\Order\OrderService;
@@ -14,16 +14,31 @@ class OrderController extends Controller
     {
     }
 
+    /**
+     * 201 paid, 202 needs 3DS (finish it with payment.client_secret), 402 declined.
+     */
     public function store(StoreOrderRequest $request): JsonResponse
     {
-        $order = $this->orderService->placeOrder($request->toDTO());
+        $placed = $this->orderService->placeOrder($request->toDTO());
+        $order = $placed->order;
 
-        $paid = $order->status === OrderStatus::PAID;
+        [$status, $message] = match ($order->paymentStatus) {
+            PaymentStatus::PAID => [201, 'Order placed successfully.'],
+            PaymentStatus::PENDING => [202, 'Confirm the payment to complete the order.'],
+            default => [402, $placed->payment?->message ?? 'Payment failed.'],
+        };
 
         return response()->json([
-            'message' => $paid ? 'Order placed successfully.' : 'Order created but payment failed.',
-            'data' => $order->toArray(),
-        ], $paid ? 201 : 402);
+            'message' => $message,
+            'data' => [
+                ...$order->toArray(),
+                'payment' => [
+                    'status' => $placed->payment?->outcome->value,
+                    'payment_intent_id' => $placed->payment?->transactionId,
+                    'client_secret' => $order->paymentStatus === PaymentStatus::PENDING ? $placed->payment?->clientSecret : null,
+                ],
+            ],
+        ], $status);
     }
 
     public function show(string $id): JsonResponse

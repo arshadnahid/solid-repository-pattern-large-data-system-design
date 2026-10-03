@@ -15,7 +15,6 @@ http:
     type: json
     data: |-
       {
-        "idempotency_key": "7f3c9a2e-4b1d-4e8a-9c6f-2d5e8b1a0f47",
         "currency": "USD",
 
         "shipping_address": {
@@ -101,8 +100,6 @@ http:
 
         "customer_note": "Please leave the package at the front desk."
       }
-
-      here what need to ensure payment ,suppose i am using stripe
   auth: inherit
 
 runtime:
@@ -116,7 +113,8 @@ runtime:
         }
     - type: after-response
       code: |-
-        if (res.status === 201) {
+        // 201 paid, 202 needs 3DS (data.payment.client_secret), 402 declined.
+        if ([201, 202, 402].includes(res.status)) {
           bru.setEnvVar("orderId", res.body.data.id);
         }
 

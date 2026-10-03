@@ -2,7 +2,7 @@
 
 namespace App\DTOs\Order;
 
-use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 
 /**
  * Output data of the order repository. Every repository implementation
@@ -10,31 +10,49 @@ use App\Enums\OrderStatus;
  */
 final class OrderDTO
 {
+    /**
+     * @param  OrderItemDTO[]  $items
+     * @param  string[]  $couponIds  Coupons whose usage this order holds.
+     */
     public function __construct(
         public readonly string $id,
+        public readonly string $orderCode,
         public readonly int $userId,
-        public readonly OrderStatus $status,
-        public readonly string $paymentMethod,
+        public readonly PaymentStatus $paymentStatus,
+        public readonly string $paymentProvider,
         public readonly string $currency,
-        public readonly float $totalAmount,
+        public readonly OrderTotalsDTO $totals,
         public readonly array $items,
-        public readonly ?string $transactionId,
+        public readonly array $couponIds,
+        public readonly ?string $paymentIntentId,
         public readonly string $createdAt,
     ) {
     }
 
-    public static function fromArray(array $data): self
+    /**
+     * @param  OrderItemDTO[]  $items
+     * @param  string[]  $couponIds
+     */
+    public static function fromRow(object $row, array $items, array $couponIds): self
     {
         return new self(
-            id: $data['id'],
-            userId: (int) $data['user_id'],
-            status: OrderStatus::from($data['status']),
-            paymentMethod: $data['payment_method'],
-            currency: $data['currency'],
-            totalAmount: (float) $data['total_amount'],
-            items: $data['items'],
-            transactionId: $data['transaction_id'] ?? null,
-            createdAt: (string) $data['created_at'],
+            id: $row->id,
+            orderCode: $row->order_code,
+            userId: (int) $row->user_id,
+            paymentStatus: PaymentStatus::from($row->payment_status),
+            paymentProvider: $row->payment_provider,
+            currency: $row->currency,
+            totals: new OrderTotalsDTO(
+                subtotal: (string) $row->subtotal,
+                shipping: (string) $row->total_shipping_cost,
+                tax: (string) $row->total_tax,
+                discount: (string) $row->total_discount,
+                total: (string) $row->total_amount,
+            ),
+            items: $items,
+            couponIds: $couponIds,
+            paymentIntentId: $row->stripe_payment_intent_id,
+            createdAt: (string) $row->created_at,
         );
     }
 
@@ -42,13 +60,12 @@ final class OrderDTO
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->userId,
-            'status' => $this->status->value,
-            'payment_method' => $this->paymentMethod,
+            'order_code' => $this->orderCode,
+            'payment_status' => $this->paymentStatus->value,
+            'payment_provider' => $this->paymentProvider,
             'currency' => $this->currency,
-            'total_amount' => $this->totalAmount,
-            'items' => $this->items,
-            'transaction_id' => $this->transactionId,
+            'totals' => $this->totals->toArray(),
+            'items' => array_map(fn (OrderItemDTO $item) => $item->toArray(), $this->items),
             'created_at' => $this->createdAt,
         ];
     }
