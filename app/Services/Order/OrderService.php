@@ -36,8 +36,7 @@ class OrderService
         private readonly PaymentGatewayFactory $gateways,
         private readonly OrderPricingService $pricing,
         private readonly ConnectionInterface $db,
-    ) {
-    }
+    ) {}
 
     public function placeOrder(CreateOrderDTO $data): PlacedOrderDTO
     {
@@ -49,7 +48,7 @@ class OrderService
         $priced = $this->pricing->price($data);
 
         try {
-            $order = $this->db->transaction(fn () => $this->reserveAndCreate($data, $priced));
+            $order = $this->db->transaction(fn() => $this->reserveAndCreate($data, $priced));
         } catch (UniqueConstraintViolationException $e) {
             // Another request with this key won the race; everything here was rolled back.
             $order = $this->orders->findByIdempotencyKey($data->userId, $data->idempotencyKey) ?? throw $e;
